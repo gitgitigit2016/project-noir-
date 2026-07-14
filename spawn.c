@@ -1,11 +1,4 @@
-/* =========================================================
-   spawn.c
-   -------
-   Handles placing units on the grid and spawning enemies.
-   place_unit  — validates and places a unit in a cell.
-   spawn_wave  — starts a new wave and sets enemy count.
-   spawn_enemy — puts one enemy into the enemies array.
-   ========================================================= */
+
 
 #include "spawn.h"
 

@@ -1,21 +1,8 @@
-/* =========================================================
-   draw.c
-   ------
-   Every drawing function in the game.
-   Characters, grid, clue tiles, HUD, shop, and screens.
-   ========================================================= */
+
 
 #include "draw.h"
 
-/* =========================================================
-   CHARACTER DRAWING
-   ---------------------------------------------------------
-   All characters use only circles and rectangles.
-   - Circle    = head
-   - Rectangle = body
-   Each character has a unique color so the player can
-   instantly tell units apart from enemies.
-   ========================================================= */
+
 
 /* GUARD — blue body, skin head, letter "G" on top */
 void draw_guard(float cx, float cy, float scale) {
@@ -77,9 +64,9 @@ void draw_brute(float cx, float cy, float scale, float bob) {
     DrawCircle(x + s / 2, y - s * 2, s * 0.35f, ORANGE);
 }
 
-/* =========================================================
-   GRID AND GAME ELEMENTS
-   ========================================================= */
+
+  // GRID AND GAME ELEMENTS
+   
 
 void draw_grid(void) {
     for (int row = 0; row < GRID_ROWS; row++) {
@@ -183,9 +170,9 @@ void draw_particles_all(void) {
     }
 }
 
-/* =========================================================
-   HUD AND UI
-   ========================================================= */
+
+  // HUD AND UI
+   
 
 void draw_hud(void) {
     DrawRectangle(0, 0, SCREEN_W, 50, (Color){14,10,8,245});
@@ -257,9 +244,9 @@ void draw_shop(void) {
              310, (int)sy+58, 13, (Color){90,100,160,255});
 }
 
-/* =========================================================
-   SCREENS
-   ========================================================= */
+
+  // SCREENS
+
 
 void draw_map(void) {
     ClearBackground((Color){12,10,8,255});
