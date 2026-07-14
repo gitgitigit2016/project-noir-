@@ -4,53 +4,53 @@
 
 
 
-/* GUARD — blue body, skin head, letter "G" on top */
+// GUARD — blue body, skin head, letter "G" on top 
 void draw_guard(float cx, float cy, float scale) {
     int x = (int)cx, y = (int)cy, s = (int)scale;
 
-    /* Body: a blue rectangle */
+    // Body: a blue rectangle 
     DrawRectangle(x - s, y - s, s * 2, s * 3, (Color){50, 80, 200, 255});
 
-    /* Head: a skin-colored circle above the body */
+    // Head: a skin-colored circle above the body 
     DrawCircle(x, y - s * 2, s * 1.2f, (Color){220, 180, 140, 255});
 
-    /* "G" label so the player knows this is a Guard */
+    // "G" label so the player knows this is a Guard 
     DrawText("G", x - 5, y - s * 3 + 2, 14, WHITE);
 }
 
-/* COOK — white body (chef uniform), skin head, letter "C" */
+// COOK — white body (chef uniform), skin head, letter "C" 
 void draw_cook(float cx, float cy, float scale) {
     int x = (int)cx, y = (int)cy, s = (int)scale;
 
-    /* Body: white rectangle (chef whites) */
+    // Body: white rectangle (chef whites) 
     DrawRectangle(x - s, y - s, s * 2, s * 3, (Color){240, 240, 220, 255});
 
-    /* Head: skin circle */
+    // Head: skin circle 
     DrawCircle(x, y - s * 2, s * 1.2f, (Color){220, 180, 140, 255});
 
-    /* "C" label */
+    // "C" label 
     DrawText("C", x - 5, y - s * 3 + 2, 14, (Color){40, 40, 40, 255});
 }
 
-/* SUSPECT enemy — dark body, reddish head, glowing red eyes */
+// SUSPECT enemy — dark body, reddish head, glowing red eyes 
 void draw_suspect(float cx, float cy, float scale, float bob) {
     /* bob is a small up/down value that creates a walking animation */
     int x = (int)cx, y = (int)(cy + bob), s = (int)scale;
 
-    /* Body: dark brown rectangle (shadowy coat) */
+    // Body: dark brown rectangle (shadowy coat) 
     DrawRectangle(x - s, y - s, s * 2, s * 3, (Color){60, 40, 30, 255});
 
-    /* Head: reddish circle */
+    // Head: reddish circle 
     DrawCircle(x, y - s * 2, s * 1.2f, (Color){180, 80, 80, 255});
 
-    /* Two small red circles = glowing eyes */
+    // Two small red circles = glowing eyes 
     DrawCircle(x - s / 2, y - s * 2, s * 0.3f, RED);
     DrawCircle(x + s / 2, y - s * 2, s * 0.3f, RED);
 }
 
-/* BRUTE enemy — same idea but 40% bigger, darker, orange eyes */
+// BRUTE enemy — same idea but 40% bigger, darker, orange eyes 
 void draw_brute(float cx, float cy, float scale, float bob) {
-    /* Scale multiplied by 1.4 makes brutes visibly bigger than suspects */
+    // Scale multiplied by 1.4 makes brutes visibly bigger than suspects 
     int x = (int)cx, y = (int)(cy + bob), s = (int)(scale * 1.4f);
 
     /* Body: dark red rectangle */
@@ -59,7 +59,7 @@ void draw_brute(float cx, float cy, float scale, float bob) {
     /* Head: larger circle */
     DrawCircle(x, y - s * 2, s * 1.3f, (Color){140, 60, 40, 255});
 
-    /* Orange eyes — different from suspect so player can tell them apart */
+    // Orange eyes — different from suspect so player can tell them apart 
     DrawCircle(x - s / 2, y - s * 2, s * 0.35f, ORANGE);
     DrawCircle(x + s / 2, y - s * 2, s * 0.35f, ORANGE);
 }

@@ -1,9 +1,4 @@
-/* =========================================================
-   init.c
-   ------
-   Sets up the game state at the start and when entering
-   the kitchen. Called once at launch and on restart.
-   ========================================================= */
+
 
 #include "init.h"
 

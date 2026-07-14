@@ -1,10 +1,4 @@
-/* =========================================================
-   update.c
-   --------
-   The main game logic that runs every frame.
-   Moves enemies, handles unit attacks, counts waves,
-   and reads mouse input for placing units.
-   ========================================================= */
+
 
 #include "update.h"
 

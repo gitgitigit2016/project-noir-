@@ -1,14 +1,6 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
-/* =========================================================
-   constants.h
-   -----------
-   All the fixed numbers used across the whole game.
-   If you want to change the grid size, window size,
-   costs etc — this is the only file you need to touch.
-   ========================================================= */
-
 #include "raylib.h"
 #include <stdio.h>
 #include <stdlib.h>
