@@ -1,4 +1,4 @@
-
+#if 0 
 #ifndef SCORE_POPUP_H // ifnotdefined 
 #define SCORE_POPUP_H // this is to avoid REDEFINITION error and for the second time the compiler reads it it skips till endif to save proccessing time 
 
@@ -31,5 +31,5 @@ void UpdateScorePopups(void);
 
 // Iterates through active slots and physically prints the text 
 void DrawScorePopups(void);
-
+#endif
 #endif 

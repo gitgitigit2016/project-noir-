@@ -1,3 +1,5 @@
+#if 0 
+
 #include "score_popup.h" // .c file exists since linker can create a " double definition " problem 
 #include <stdio.h> // Required for snprintf 
 
@@ -66,3 +68,4 @@ void DrawScorePopups(void) {
         }
     }
 }
+    #endif
