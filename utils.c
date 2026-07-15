@@ -28,4 +28,3 @@ void set_message(const char *msg, float dur) {
     strncpy(G.message, msg, 127);
     G.message_timer = dur;
 }
-

@@ -26,7 +26,7 @@ void update_defense(void) {
         Enemy *e = &G.enemies[i];
         if (!e->active) continue;
         float target_y = G.grid_oy + e->lane * G.cell_h + G.cell_h * 0.5f;
-        e->y += (target_y - e->y) * 6.f * dt;
+       
         e->x -= e->speed * dt;
 
         if (e->x < safe_x) {
@@ -56,26 +56,24 @@ void update_defense(void) {
             if (u->type == UNIT_GUARD && e->lane != u->row) continue;
             float dx = e->x - u->x, dy = e->y - u->y;
             float d  = sqrtf(dx*dx + dy*dy);
-            if (d < range && d < best) { best = d; bi = ei; }
+            if (d < range && d < best) 
+            { best = d;
+                 bi = ei; }
         }
         if (bi >= 0) {
             G.enemies[bi].hp -= (float)dmg;
             u->attack_timer = aspd;
-            if (u->type == UNIT_COOK) {
-                for (int ei = 0; ei < MAX_ENEMIES; ei++) {
-                    if (ei == bi || !G.enemies[ei].active) continue;
-                    float dx = G.enemies[ei].x - u->x, dy = G.enemies[ei].y - u->y;
-                    if (sqrtf(dx*dx+dy*dy) < range) G.enemies[ei].hp -= dmg * 0.5f;
-                }
             }
-            Color pc = (u->type==UNIT_GUARD)?(Color){255,255,100,255}:(Color){255,140,50,255};
-        }
+          
+        
     }
     if (G.wave_active && G.wave > 0 && G.enemies_this_wave > 0
         && G.enemies_spawned >= G.enemies_this_wave) {
-        bool any = false;
+        bool any = false; // any == a flag if the enemy exists or not 
         for (int i = 0; i < MAX_ENEMIES; i++)
-            if (G.enemies[i].active) { any = true; break; }
+            if (G.enemies[i].active)
+             { any = true; 
+                break; }
         if (!any) {
             G.wave_active = false;
             G.gold += 5;

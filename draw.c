@@ -241,4 +241,3 @@ void draw_win(void) {
              SCREEN_W/2 - MeasureText("[R] to play again",22)/2,
              520, 22, (Color){150,200,150,255});
 }
-
