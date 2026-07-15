@@ -1,13 +1,11 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
-
 #include "raylib.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include <time.h>
-
 #define SCREEN_W      1280
 #define SCREEN_H      800
 #define FPS           60

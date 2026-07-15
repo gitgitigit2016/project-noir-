@@ -1,7 +1,4 @@
-
-
 #include "spawn.h"
-
 bool place_unit(UnitType type, int col, int row) {
     int cost = (type == UNIT_GUARD) ? COST_GUARD : COST_COOK;
     if (G.gold < cost)         { set_message("Not enough gold!", 1.5f);           return false; }
@@ -9,13 +6,11 @@ bool place_unit(UnitType type, int col, int row) {
     if (col >= GRID_COLS - 1)  { set_message("Can't place on entry column!", 1.5f); return false; }
     if (cell_has_unit(col,row)){ set_message("Cell already occupied!", 1.5f);     return false; }
     if (G.unit_count >= MAX_UNITS) return false;
-
     Vector2 p = grid_to_pixel(col, row);
     G.units[G.unit_count++] = (Unit){ type, col, row, p.x, p.y, 0.f, true };
     G.gold -= cost;
     return true;
 }
-
 void spawn_wave(int wave_num) {
     G.wave_active       = true;
     G.enemies_spawned   = 0;
@@ -31,7 +26,7 @@ void spawn_enemy(int lane) {
             float hp    = (t == ENEMY_BRUTE) ? 12.f :  5.f;
             float sx    = G.grid_ox + GRID_COLS * G.cell_w + 10.f;
             float sy    = G.grid_oy + lane * G.cell_h + G.cell_h * 0.5f;
-            G.enemies[i] = (Enemy){ t, sx, sy, lane, spd, hp, hp, true, 0.f };
+            G.enemies[i] = (Enemy){ t, sx, sy, lane, spd, hp, hp, true };
             G.enemy_count++;
             return;
         }

@@ -1,13 +1,8 @@
-
-
 #include "update.h"
-
 void update_defense(void) {
     float dt = GetFrameTime();
     G.game_time     += dt;
     G.message_timer -= dt;
-
-    /* Wave countdown */
     if (!G.wave_active && G.wave < WAVE_COUNT) {
         G.wave_timer -= dt;
         if (G.wave_timer <= 0.f) {
@@ -18,8 +13,6 @@ void update_defense(void) {
             set_message(buf, 2.f);
         }
     }
-
-    /* Spawn enemies */
     if (G.wave_active && G.enemies_spawned < G.enemies_this_wave) {
         G.spawn_timer -= dt;
         if (G.spawn_timer <= 0.f) {
@@ -28,13 +21,10 @@ void update_defense(void) {
             G.enemies_spawned++;
         }
     }
-
-    /* Update enemies */
     float safe_x = G.grid_ox + G.cell_w * 0.5f;
     for (int i = 0; i < MAX_ENEMIES; i++) {
         Enemy *e = &G.enemies[i];
         if (!e->active) continue;
-        e->anim_timer += dt;
         float target_y = G.grid_oy + e->lane * G.cell_h + G.cell_h * 0.5f;
         e->y += (target_y - e->y) * 6.f * dt;
         e->x -= e->speed * dt;
@@ -42,24 +32,19 @@ void update_defense(void) {
         if (e->x < safe_x) {
             e->active = false;
             G.safe_hp--;
-            spawn_particles(safe_x, e->y, RED, 10);
             set_message("The safe was breached!", 2.f);
             if (G.safe_hp <= 0) { G.phase = PHASE_GAMEOVER; return; }
         }
         if (e->hp <= 0.f) {
             e->active = false;
             G.gold++;
-            spawn_particles(e->x, e->y, (Color){255,220,50,255}, 6);
         }
     }
-
-    /* Update units — attack */
     for (int i = 0; i < G.unit_count; i++) {
         Unit *u = &G.units[i];
         if (!u->active) continue;
         u->attack_timer -= dt;
         if (u->attack_timer > 0.f) continue;
-
         float range = (u->type == UNIT_GUARD) ? G.cell_w * 3.5f : G.cell_w * 1.8f;
         int   dmg   = (u->type == UNIT_GUARD) ? 2 : 3;
         float aspd  = (u->type == UNIT_GUARD) ? 1.1f : 0.75f;
@@ -84,19 +69,8 @@ void update_defense(void) {
                 }
             }
             Color pc = (u->type==UNIT_GUARD)?(Color){255,255,100,255}:(Color){255,140,50,255};
-            spawn_particles(G.enemies[bi].x, G.enemies[bi].y, pc, 3);
         }
     }
-
-    /* Update particles */
-    for (int i = 0; i < MAX_PARTICLES; i++) {
-        Particle *p = &G.particles[i];
-        if (p->life <= 0.f) continue;
-        p->x += p->vx * dt; p->y += p->vy * dt;
-        p->vy += 80.f * dt; p->life -= dt;
-    }
-
-    /* Check wave complete */
     if (G.wave_active && G.wave > 0 && G.enemies_this_wave > 0
         && G.enemies_spawned >= G.enemies_this_wave) {
         bool any = false;
@@ -115,8 +89,6 @@ void update_defense(void) {
             }
         }
     }
-
-    /* Mouse input */
     Vector2 mp = GetMousePosition();
     float shop_y = SCREEN_H - 95.f;
     if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {

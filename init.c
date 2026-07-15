@@ -1,7 +1,4 @@
-
-
 #include "init.h"
-
 void init_game(void) {
     srand((unsigned)time(NULL));
     memset(&G, 0, sizeof(G));
@@ -21,7 +18,6 @@ void init_kitchen(void) {
 
     memset(G.units,     0, sizeof(G.units));
     memset(G.enemies,   0, sizeof(G.enemies));
-    memset(G.particles, 0, sizeof(G.particles));
     G.unit_count        = 0;
     G.enemy_count       = 0;
     G.wave              = 0;
@@ -31,8 +27,6 @@ void init_kitchen(void) {
     G.gold              = 15;
     G.enemies_spawned   = 0;
     G.enemies_this_wave = 0;
-
-    /* 3 fixed clue tiles so they are always visible */
     G.clue_tile_count = 3;
     G.clue_tiles[0] = (ClueTile){ 3, 0 };
     G.clue_tiles[1] = (ClueTile){ 6, 1 };

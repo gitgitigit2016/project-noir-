@@ -1,73 +1,30 @@
-
-
 #include "draw.h"
-
-
-
-// GUARD — blue body, skin head, letter "G" on top 
 void draw_guard(float cx, float cy, float scale) {
     int x = (int)cx, y = (int)cy, s = (int)scale;
-
-    // Body: a blue rectangle 
     DrawRectangle(x - s, y - s, s * 2, s * 3, (Color){50, 80, 200, 255});
-
-    // Head: a skin-colored circle above the body 
     DrawCircle(x, y - s * 2, s * 1.2f, (Color){220, 180, 140, 255});
-
-    // "G" label so the player knows this is a Guard 
     DrawText("G", x - 5, y - s * 3 + 2, 14, WHITE);
 }
-
-// COOK — white body (chef uniform), skin head, letter "C" 
 void draw_cook(float cx, float cy, float scale) {
     int x = (int)cx, y = (int)cy, s = (int)scale;
-
-    // Body: white rectangle (chef whites) 
     DrawRectangle(x - s, y - s, s * 2, s * 3, (Color){240, 240, 220, 255});
-
-    // Head: skin circle 
     DrawCircle(x, y - s * 2, s * 1.2f, (Color){220, 180, 140, 255});
-
-    // "C" label 
     DrawText("C", x - 5, y - s * 3 + 2, 14, (Color){40, 40, 40, 255});
 }
-
-// SUSPECT enemy — dark body, reddish head, glowing red eyes 
 void draw_suspect(float cx, float cy, float scale, float bob) {
-    /* bob is a small up/down value that creates a walking animation */
     int x = (int)cx, y = (int)(cy + bob), s = (int)scale;
-
-    // Body: dark brown rectangle (shadowy coat) 
     DrawRectangle(x - s, y - s, s * 2, s * 3, (Color){60, 40, 30, 255});
-
-    // Head: reddish circle 
     DrawCircle(x, y - s * 2, s * 1.2f, (Color){180, 80, 80, 255});
-
-    // Two small red circles = glowing eyes 
     DrawCircle(x - s / 2, y - s * 2, s * 0.3f, RED);
     DrawCircle(x + s / 2, y - s * 2, s * 0.3f, RED);
 }
-
-// BRUTE enemy — same idea but 40% bigger, darker, orange eyes 
 void draw_brute(float cx, float cy, float scale, float bob) {
-    // Scale multiplied by 1.4 makes brutes visibly bigger than suspects 
     int x = (int)cx, y = (int)(cy + bob), s = (int)(scale * 1.4f);
-
-    /* Body: dark red rectangle */
     DrawRectangle(x - s, y - s, s * 2, s * 3, (Color){80, 30, 20, 255});
-
-    /* Head: larger circle */
     DrawCircle(x, y - s * 2, s * 1.3f, (Color){140, 60, 40, 255});
-
-    // Orange eyes — different from suspect so player can tell them apart 
     DrawCircle(x - s / 2, y - s * 2, s * 0.35f, ORANGE);
     DrawCircle(x + s / 2, y - s * 2, s * 0.35f, ORANGE);
 }
-
-
-  // GRID AND GAME ELEMENTS
-   
-
 void draw_grid(void) {
     for (int row = 0; row < GRID_ROWS; row++) {
         for (int col = 0; col < GRID_COLS; col++) {
@@ -102,7 +59,7 @@ void draw_grid(void) {
 }
 
 void draw_clue_tiles(void) {
-    float pulse = 0.5f + 0.5f * sinf(G.game_time * 3.f);
+    float pulse = 1.0f;
 
     for (int i = 0; i < G.clue_tile_count; i++) {
         float cx = G.grid_ox + G.clue_tiles[i].col * G.cell_w;
@@ -140,7 +97,7 @@ void draw_enemies_grid(void) {
         Enemy *e = &G.enemies[i];
         if (!e->active) continue;
 
-        float bob = sinf(e->anim_timer * 5.f) * 2.5f;
+        float bob = 0;
 
         if (e->type == ENEMY_SUSPECT) draw_suspect(e->x, e->y, scale, bob);
         else                          draw_brute  (e->x, e->y, scale, bob);
@@ -156,24 +113,6 @@ void draw_enemies_grid(void) {
                       pct > 0.25f ? (Color){255,200,0,255} : RED);
     }
 }
-
-void draw_particles_all(void) {
-    for (int i = 0; i < MAX_PARTICLES; i++) {
-        Particle *p = &G.particles[i];
-        if (p->life <= 0.f) continue;
-
-        float a = p->life / p->max_life;
-        Color c = p->color;
-        c.a = (unsigned char)(a * 255);
-
-        DrawCircle((int)p->x, (int)p->y, p->size * a, c);
-    }
-}
-
-
-  // HUD AND UI
-   
-
 void draw_hud(void) {
     DrawRectangle(0, 0, SCREEN_W, 50, (Color){14,10,8,245});
 
@@ -243,11 +182,6 @@ void draw_shop(void) {
     DrawText("? = Clue tile   (Investigator coming next build!)",
              310, (int)sy+58, 13, (Color){90,100,160,255});
 }
-
-
-  // SCREENS
-
-
 void draw_map(void) {
     ClearBackground((Color){12,10,8,255});
 
