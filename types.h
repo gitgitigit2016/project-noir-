@@ -1,6 +1,10 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#include <stdbool.h>
+#include "raylib.h"
+#include "constants.h"
+
 /* =========================================================
    types.h
    -------

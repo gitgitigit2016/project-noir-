@@ -1,6 +1,7 @@
 #include "ui.h"
 
 #include "game_state.h"
+#include "constants.h"
 
 #include "raylib.h"
 #include <math.h>
