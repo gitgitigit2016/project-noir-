@@ -1,134 +1,256 @@
-
-
 #include "update.h"
+#include "init.h"
+#include "spawn.h"
+#include "utils.h"
 
-void update_defense(void) {
-    float dt = GetFrameTime();
-    G.game_time     += dt;
-    G.message_timer -= dt;
+static void open_info(const char *title, const char *text) {
+    G.popup_title = title;
+    G.popup_text = text;
+    G.panel = PANEL_INFO;
+    G.placing_unit = false;
+}
 
-    /* Wave countdown */
-    if (!G.wave_active && G.wave < WAVE_COUNT) {
-        G.wave_timer -= dt;
-        if (G.wave_timer <= 0.f) {
-            G.wave++;
-            spawn_wave(G.wave);
-            char buf[64];
-            snprintf(buf, 63, "Wave %d incoming!", G.wave);
-            set_message(buf, 2.f);
-        }
+static void maybe_unlock_rumor(void) {
+    int expected = G.kills / KILL_RUMOR_STEP;
+
+    if (expected > G.rumor_count && G.rumor_count < TOTAL_RUMORS) {
+        int id = G.rumor_count;
+        G.rumor_count++;
+        open_info("RUMOR - UNVERIFIED", RUMORS[id]);
+    }
+}
+
+void collect_evidence(int id) {
+    if (id < 0 || id >= TOTAL_EVIDENCE) return;
+    Evidence *e = &EVIDENCE[id];
+
+    if (e->collected) {
+        set_message("That location has already been searched.", 2.0f);
+        return;
     }
 
-    /* Spawn enemies */
-    if (G.wave_active && G.enemies_spawned < G.enemies_this_wave) {
-        G.spawn_timer -= dt;
-        if (G.spawn_timer <= 0.f) {
-            G.spawn_timer = 1.3f;
-            spawn_enemy(randi(0, GRID_ROWS - 1));
-            G.enemies_spawned++;
-        }
+    if (!evidence_unlocked(id)) {
+        set_message("That evidence location is not available yet.", 2.0f);
+        return;
     }
 
-    /* Update enemies */
-    float safe_x = G.grid_ox + G.cell_w * 0.5f;
-    for (int i = 0; i < MAX_ENEMIES; i++) {
-        Enemy *e = &G.enemies[i];
-        if (!e->active) continue;
-        e->anim_timer += dt;
-        float target_y = G.grid_oy + e->lane * G.cell_h + G.cell_h * 0.5f;
-        e->y += (target_y - e->y) * 6.f * dt;
-        e->x -= e->speed * dt;
-
-        if (e->x < safe_x) {
-            e->active = false;
-            G.safe_hp--;
-            spawn_particles(safe_x, e->y, RED, 10);
-            set_message("The safe was breached!", 2.f);
-            if (G.safe_hp <= 0) { G.phase = PHASE_GAMEOVER; return; }
-        }
-        if (e->hp <= 0.f) {
-            e->active = false;
-            G.gold++;
-            spawn_particles(e->x, e->y, (Color){255,220,50,255}, 6);
-        }
+    if (G.credits < e->cost) {
+        set_message("Not enough Credits to search that location.", 2.0f);
+        return;
     }
 
-    /* Update units — attack */
+    G.credits -= e->cost;
+    e->collected = true;
+    G.evidence_count++;
+
+    if (e->major) open_info("MAJOR EVIDENCE DISCOVERED", e->text);
+    else open_info(e->title, e->text);
+}
+
+bool place_unit(UnitType type, int col, int row) {
+    int cost = unit_cost(type);
+
+    if (G.credits < cost) {
+        set_message("Not enough Credits.", 1.5f);
+        return false;
+    }
+
+    if (col <= 0) {
+        set_message("The Archive column is protected space.", 1.5f);
+        return false;
+    }
+
+    if (col >= GRID_COLS - 1) {
+        set_message("Enemy entry column cannot hold defenders.", 1.5f);
+        return false;
+    }
+
+    if (cell_has_unit(col, row)) {
+        set_message("That cell already has a defender.", 1.5f);
+        return false;
+    }
+
+    int evidence_id = evidence_at_cell(col, row);
+    if (evidence_id >= 0 && !EVIDENCE[evidence_id].collected) {
+        set_message("That cell contains a clue location.", 1.5f);
+        return false;
+    }
+
+    if (G.unit_count >= MAX_UNITS) {
+        set_message("Defender limit reached.", 1.5f);
+        return false;
+    }
+
+    Vector2 p = grid_center(col, row);
+    Unit *u = &G.units[G.unit_count++];
+    u->type = type;
+    u->col = col;
+    u->row = row;
+    u->x = p.x;
+    u->y = p.y;
+    u->attack_timer = 0.0f;
+    u->active = true;
+
+    G.credits -= cost;
+    return true;
+}
+
+void update_units(float dt) {
     for (int i = 0; i < G.unit_count; i++) {
         Unit *u = &G.units[i];
         if (!u->active) continue;
+
         u->attack_timer -= dt;
-        if (u->attack_timer > 0.f) continue;
+        if (u->attack_timer > 0.0f) continue;
 
-        float range = (u->type == UNIT_GUARD) ? G.cell_w * 3.5f : G.cell_w * 1.8f;
-        int   dmg   = (u->type == UNIT_GUARD) ? 2 : 3;
-        float aspd  = (u->type == UNIT_GUARD) ? 1.1f : 0.75f;
+        float range;
+        float cooldown;
+        float damage;
 
-        float best = 1e9f; int bi = -1;
-        for (int ei = 0; ei < MAX_ENEMIES; ei++) {
-            Enemy *e = &G.enemies[ei];
+        if (u->type == UNIT_GUARD) {
+            range = G.cell_w * 4.0f;
+            cooldown = 0.85f;
+            damage = 2.0f;
+        } else {
+            range = G.cell_w * 1.7f;
+            cooldown = 0.65f;
+            damage = 3.0f;
+        }
+
+        int best_id = -1;
+        float best_distance = 999999.0f;
+
+        for (int j = 0; j < MAX_ENEMIES; j++) {
+            Enemy *e = &G.enemies[j];
             if (!e->active) continue;
             if (u->type == UNIT_GUARD && e->lane != u->row) continue;
-            float dx = e->x - u->x, dy = e->y - u->y;
-            float d  = sqrtf(dx*dx + dy*dy);
-            if (d < range && d < best) { best = d; bi = ei; }
-        }
-        if (bi >= 0) {
-            G.enemies[bi].hp -= (float)dmg;
-            u->attack_timer = aspd;
-            if (u->type == UNIT_COOK) {
-                for (int ei = 0; ei < MAX_ENEMIES; ei++) {
-                    if (ei == bi || !G.enemies[ei].active) continue;
-                    float dx = G.enemies[ei].x - u->x, dy = G.enemies[ei].y - u->y;
-                    if (sqrtf(dx*dx+dy*dy) < range) G.enemies[ei].hp -= dmg * 0.5f;
-                }
-            }
-            Color pc = (u->type==UNIT_GUARD)?(Color){255,255,100,255}:(Color){255,140,50,255};
-            spawn_particles(G.enemies[bi].x, G.enemies[bi].y, pc, 3);
-        }
-    }
 
-    /* Update particles */
-    for (int i = 0; i < MAX_PARTICLES; i++) {
-        Particle *p = &G.particles[i];
-        if (p->life <= 0.f) continue;
-        p->x += p->vx * dt; p->y += p->vy * dt;
-        p->vy += 80.f * dt; p->life -= dt;
-    }
+            float dx = e->x - u->x;
+            float dy = e->y - u->y;
+            float d = sqrtf(dx * dx + dy * dy);
 
-    /* Check wave complete */
-    if (G.wave_active && G.wave > 0 && G.enemies_this_wave > 0
-        && G.enemies_spawned >= G.enemies_this_wave) {
-        bool any = false;
-        for (int i = 0; i < MAX_ENEMIES; i++)
-            if (G.enemies[i].active) { any = true; break; }
-        if (!any) {
-            G.wave_active = false;
-            G.gold += 5;
-            if (G.wave >= WAVE_COUNT) {
-                G.phase = PHASE_WIN;
-            } else {
-                G.wave_timer = 5.f;
-                char buf[64];
-                snprintf(buf, 63, "Wave %d cleared! +5 gold", G.wave);
-                set_message(buf, 2.5f);
+            if (d < range && d < best_distance) {
+                best_distance = d;
+                best_id = j;
             }
         }
+
+        if (best_id >= 0) {
+            G.enemies[best_id].hp -= damage;
+            u->attack_timer = cooldown;
+        }
+    }
+}
+
+void update_enemies(float dt) {
+    float archive_x = G.grid_x + G.cell_w * 0.55f;
+
+    for (int i = 0; i < MAX_ENEMIES; i++) {
+        Enemy *e = &G.enemies[i];
+        if (!e->active) continue;
+
+        if (e->hp <= 0.0f) {
+            e->active = false;
+            G.kills++;
+            G.credits++;
+            set_message("Enemy stopped. +1 Credit", 1.0f);
+            maybe_unlock_rumor();
+            continue;
+        }
+
+        e->x -= e->speed * dt;
+
+        if (e->x <= archive_x) {
+            e->active = false;
+            G.archive_hp--;
+
+            if (G.archive_hp <= 0) {
+                G.archive_hp = 0;
+                G.state = STATE_LOSE;
+                G.wrong_accusation = false;
+                G.panel = PANEL_NONE;
+                return;
+            }
+
+            set_message("The Evidence Archive was hit!", 2.0f);
+        }
+    }
+}
+
+static void handle_grid_click(Vector2 mouse) {
+    int col, row;
+    if (!pixel_to_grid(mouse, &col, &row)) return;
+
+    int evidence_id = evidence_at_cell(col, row);
+
+    if (!G.placing_unit && evidence_id >= 0) {
+        collect_evidence(evidence_id);
+        return;
     }
 
-    /* Mouse input */
-    Vector2 mp = GetMousePosition();
-    float shop_y = SCREEN_H - 95.f;
-    if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-        if (mp.x>20&&mp.x<140&&mp.y>shop_y&&mp.y<shop_y+75) {
-            G.selected = UNIT_GUARD; G.place_mode = true;
-        } else if (mp.x>150&&mp.x<270&&mp.y>shop_y&&mp.y<shop_y+75) {
-            G.selected = UNIT_COOK; G.place_mode = true;
+    if (G.placing_unit && place_unit(G.selected_unit, col, row)) {
+        G.placing_unit = false;
+    }
+}
+
+void update_play_input(void) {
+    Vector2 mouse = GetMousePosition();
+
+    if (IsMouseButtonPressed(MOUSE_RIGHT_BUTTON)) G.placing_unit = false;
+    if (!IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) return;
+
+    if (point_in_rect(mouse, guard_button_rect())) {
+        G.selected_unit = UNIT_GUARD;
+        G.placing_unit = true;
+        return;
+    }
+
+    if (point_in_rect(mouse, cook_button_rect())) {
+        G.selected_unit = UNIT_COOK;
+        G.placing_unit = true;
+        return;
+    }
+
+    if (point_in_rect(mouse, case_button_rect())) {
+        G.panel = PANEL_CASEFILE;
+        G.placing_unit = false;
+        return;
+    }
+
+    if (point_in_rect(mouse, accuse_button_rect())) {
+        if (G.evidence_count >= ACCUSE_REQUIRED) {
+            G.panel = PANEL_ACCUSE;
+            G.placing_unit = false;
         } else {
-            int col, row;
-            if (G.place_mode && pixel_to_grid(mp, &col, &row))
-                place_unit(G.selected, col, row);
+            set_message("Collect at least 4/7 Evidence before accusing.", 2.0f);
         }
+        return;
     }
-    if (IsMouseButtonPressed(MOUSE_RIGHT_BUTTON)) G.place_mode = false;
+
+    handle_grid_click(mouse);
+}
+
+void update_game(void) {
+    float dt = GetFrameTime();
+
+    if (G.message_timer > 0.0f) G.message_timer -= dt;
+
+    if (G.state == STATE_TITLE) {
+        if (IsKeyPressed(KEY_ENTER) || IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) start_game();
+        return;
+    }
+
+    if (G.state == STATE_WIN || G.state == STATE_LOSE) {
+        if (IsKeyPressed(KEY_R)) start_game();
+        return;
+    }
+
+    if (G.panel != PANEL_NONE) return;
+
+    G.game_time += dt;
+    update_spawning(dt);
+    update_units(dt);
+    update_enemies(dt);
+
+    if (G.state == STATE_PLAY) update_play_input();
 }

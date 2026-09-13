@@ -1,88 +1,92 @@
 #ifndef TYPES_H
 #define TYPES_H
-
-#include <stdbool.h>
-#include "raylib.h"
 #include "constants.h"
 
-/* =========================================================
-   types.h
-   -------
-   All enums and structs used across the game.
-   Defines what a Unit, Enemy, Particle etc looks like.
-   ========================================================= */
+typedef enum {
+    STATE_TITLE,
+    STATE_PLAY,
+    STATE_WIN,
+    STATE_LOSE
+} GameState;
 
-#include "constants.h"
+typedef enum {
+    UNIT_GUARD,
+    UNIT_COOK
+} UnitType;
 
-/* =========================================================
-   ENUMS
-   ========================================================= */
+typedef enum {
+    ENEMY_WALKER,
+    ENEMY_BRUTE
+} EnemyType;
 
-typedef enum { PHASE_MAP, PHASE_DEFENSE, PHASE_GAMEOVER, PHASE_WIN } GamePhase;
-typedef enum { UNIT_GUARD, UNIT_COOK } UnitType;
-typedef enum { ENEMY_SUSPECT, ENEMY_BRUTE } EnemyType;
-
-/* =========================================================
-   STRUCTS
-   ========================================================= */
+typedef enum {
+    PANEL_NONE,
+    PANEL_INFO,
+    PANEL_CASEFILE,
+    PANEL_ACCUSE
+} PanelType;
 
 typedef struct {
     UnitType type;
-    int col, row;
-    float x, y;
+    int col;
+    int row;
+    float x;
+    float y;
     float attack_timer;
     bool active;
 } Unit;
 
 typedef struct {
     EnemyType type;
-    float x, y;
     int lane;
+    float x;
+    float y;
+    float hp;
+    float max_hp;
     float speed;
-    float hp, max_hp;
     bool active;
-    float anim_timer;
 } Enemy;
 
 typedef struct {
-    int col, row;
-} ClueTile;
+    const char *title;
+    const char *text;
+    int col;
+    int row;
+    int cost;
+    bool major;
+    bool collected;
+} Evidence;
 
 typedef struct {
-    float x, y, vx, vy;
-    float life, max_life;
-    Color color;
-    float size;
-} Particle;
-
-/* =========================================================
-   GAME STATE
-   ========================================================= */
+    const char *name;
+    const char *role;
+    const char *note;
+} Suspect;
 
 typedef struct {
-    GamePhase phase;
-    float cell_w, cell_h;
-    float grid_ox, grid_oy;
-    Unit      units[MAX_UNITS];
-    int       unit_count;
-    Enemy     enemies[MAX_ENEMIES];
-    int       enemy_count;
-    int       wave;
-    float     wave_timer;
-    bool      wave_active;
-    int       enemies_this_wave;
-    int       enemies_spawned;
-    float     spawn_timer;
-    ClueTile  clue_tiles[3];
-    int       clue_tile_count;
-    int       gold;
-    int       safe_hp;
-    UnitType  selected;
-    bool      place_mode;
-    Particle  particles[MAX_PARTICLES];
-    char      message[128];
-    float     message_timer;
-    float     game_time;
-} GameState;
+    GameState state;
+    PanelType panel;
+    float grid_x;
+    float grid_y;
+    float cell_w;
+    float cell_h;
+    Unit units[MAX_UNITS];
+    Enemy enemies[MAX_ENEMIES];
+    int unit_count;
+    int credits;
+    int archive_hp;
+    int kills;
+    int evidence_count;
+    int rumor_count;
+    float spawn_timer;
+    float game_time;
+    UnitType selected_unit;
+    bool placing_unit;
+    char message[160];
+    float message_timer;
+    const char *popup_title;
+    const char *popup_text;
+    bool wrong_accusation;
+} Game;
 
 #endif

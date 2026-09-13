@@ -1,42 +1,31 @@
-
-
 #include "init.h"
+#include "utils.h"
 
-void init_game(void) {
-    srand((unsigned)time(NULL));
-    memset(&G, 0, sizeof(G));
-    G.phase    = PHASE_MAP;
-    G.gold     = 15;
-    G.safe_hp  = 3;
-    G.selected = UNIT_GUARD;
+static void reset_evidence(void) {
+    for (int i = 0; i < TOTAL_EVIDENCE; i++) EVIDENCE[i].collected = false;
 }
 
-void init_kitchen(void) {
-    float total_w = SCREEN_W * 0.75f;
-    float total_h = SCREEN_H * 0.52f;
-    G.cell_w  = total_w / GRID_COLS;
-    G.cell_h  = total_h / GRID_ROWS;
-    G.grid_ox = (SCREEN_W - total_w) / 2.f;
-    G.grid_oy = 110.f;
+void init_game(void) {
+    srand((unsigned int)time(NULL));
+    memset(&G, 0, sizeof(G));
+    G.state = STATE_TITLE;
+}
 
-    memset(G.units,     0, sizeof(G.units));
-    memset(G.enemies,   0, sizeof(G.enemies));
-    memset(G.particles, 0, sizeof(G.particles));
-    G.unit_count        = 0;
-    G.enemy_count       = 0;
-    G.wave              = 0;
-    G.wave_timer        = 4.f;
-    G.wave_active       = false;
-    G.safe_hp           = 3;
-    G.gold              = 15;
-    G.enemies_spawned   = 0;
-    G.enemies_this_wave = 0;
+void start_game(void) {
+    memset(&G, 0, sizeof(G));
 
-    /* 3 fixed clue tiles so they are always visible */
-    G.clue_tile_count = 3;
-    G.clue_tiles[0] = (ClueTile){ 3, 0 };
-    G.clue_tiles[1] = (ClueTile){ 6, 1 };
-    G.clue_tiles[2] = (ClueTile){ 9, 2 };
+    G.state = STATE_PLAY;
+    G.panel = PANEL_NONE;
+    G.grid_x = 110.0f;
+    G.grid_y = 125.0f;
+    G.cell_w = 88.0f;
+    G.cell_h = 78.0f;
+    G.credits = START_CREDITS;
+    G.archive_hp = ARCHIVE_MAX_HP;
+    G.selected_unit = UNIT_GUARD;
+    G.placing_unit = false;
+    G.spawn_timer = 2.0f;
 
-    set_message("Defend the Kitchen! Place Guards and Cooks.", 3.f);
+    reset_evidence();
+    set_message("Defend the Evidence Archive. Spend Credits carefully.", 4.0f);
 }
