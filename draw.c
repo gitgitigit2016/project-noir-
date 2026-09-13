@@ -1,29 +1,53 @@
 #include "draw.h"
 #include "utils.h"
 
+static Texture2D guard_texture;
+static Texture2D cook_texture;
+static Texture2D walker_texture;
+static Texture2D brute_texture;
+static Texture2D clue_texture;
+static Texture2D grid_texture;
+
+void load_draw_assets(void) {
+    guard_texture = LoadTexture("assets/guard.png");
+    cook_texture = LoadTexture("assets/cook.png");
+    walker_texture = LoadTexture("assets/walker.png");
+    brute_texture = LoadTexture("assets/brute.png");
+    clue_texture = LoadTexture("assets/clue.png");
+    grid_texture = LoadTexture("assets/grid.png");
+}
+
+void unload_draw_assets(void) {
+    UnloadTexture(guard_texture);
+    UnloadTexture(cook_texture);
+    UnloadTexture(walker_texture);
+    UnloadTexture(brute_texture);
+    UnloadTexture(clue_texture);
+    UnloadTexture(grid_texture);
+}
+
 static void draw_unit_shape(Unit *u) {
-    if (u->type == UNIT_GUARD) {
-        DrawRectangle((int)u->x - 13, (int)u->y - 18, 26, 36, GOLD);
-        DrawCircle((int)u->x, (int)u->y - 22, 12, RAYWHITE);
-        DrawText("G", (int)u->x - 6, (int)u->y - 31, 18, BLACK);
-    } else {
-        DrawRectangle((int)u->x - 13, (int)u->y - 18, 26, 36, LIGHTGRAY);
-        DrawCircle((int)u->x, (int)u->y - 22, 12, RAYWHITE);
-        DrawText("C", (int)u->x - 6, (int)u->y - 31, 18, BLACK);
-    }
+    Texture2D tex = (u->type == UNIT_GUARD) ? guard_texture : cook_texture;
+
+    float w = (u->type == UNIT_GUARD) ? 96.0f : 62.0f;
+    float h = (u->type == UNIT_GUARD) ? 104.0f : 78.0f;
+
+    Rectangle source = {0, 0, (float)tex.width, (float)tex.height};
+    Rectangle dest = {u->x - w * 0.5f, u->y - h * 0.5f, w, h};
+
+    DrawTexturePro(tex, source, dest, (Vector2){0, 0}, 0.0f, WHITE);
 }
 
 static void draw_enemy_shape(Enemy *e) {
-    Color body = (e->type == ENEMY_BRUTE) ? BROWN : MAROON;
-    int size = (e->type == ENEMY_BRUTE) ? 19 : 15;
+    Texture2D tex = (e->type == ENEMY_BRUTE) ? brute_texture : walker_texture;
 
-    DrawRectangle((int)e->x - size,
-                  (int)e->y - size,
-                  size * 2,
-                  size * 2 + 8,
-                  body);
+    float w = (e->type == ENEMY_BRUTE) ? 82.0f : 64.0f;
+    float h = (e->type == ENEMY_BRUTE) ? 90.0f : 70.0f;
 
-    DrawCircle((int)e->x, (int)e->y - size - 7, size - 3, GRAY);
+    Rectangle source = {0, 0, (float)tex.width, (float)tex.height};
+    Rectangle dest = {e->x - w * 0.5f, e->y - h * 0.5f, w, h};
+
+    DrawTexturePro(tex, source, dest, (Vector2){0, 0}, 0.0f, WHITE);
 
     float pct = e->hp / e->max_hp;
     if (pct < 0.0f) pct = 0.0f;
@@ -33,27 +57,33 @@ static void draw_enemy_shape(Enemy *e) {
 }
 
 static void draw_grid(void) {
+    Rectangle source = {0, 0, (float)grid_texture.width, (float)grid_texture.height};
+    Rectangle dest = {
+        G.grid_x,
+        G.grid_y,
+        G.cell_w * GRID_COLS,
+        G.cell_h * GRID_ROWS
+    };
+
+    DrawTexturePro(grid_texture, source, dest, (Vector2){0, 0}, 0.0f, WHITE);
+
     for (int row = 0; row < GRID_ROWS; row++) {
         for (int col = 0; col < GRID_COLS; col++) {
             float x = G.grid_x + col * G.cell_w;
             float y = G.grid_y + row * G.cell_h;
 
-            Color fill = ((row + col) % 2 == 0)
-                         ? (Color){30, 31, 34, 255}
-                         : (Color){39, 40, 44, 255};
-
-            if (col == 0) fill = (Color){65, 55, 18, 255};
-            if (col == GRID_COLS - 1) fill = (Color){52, 25, 25, 255};
-
-            DrawRectangle((int)x + 1,
-                          (int)y + 1,
-                          (int)G.cell_w - 2,
-                          (int)G.cell_h - 2,
-                          fill);
+            if (col == 0) {
+                DrawRectangle((int)x + 1, (int)y + 1,
+                              (int)G.cell_w - 2, (int)G.cell_h - 2,
+                              (Color){65, 55, 18, 170});
+            } else if (col == GRID_COLS - 1) {
+                DrawRectangle((int)x + 1, (int)y + 1,
+                              (int)G.cell_w - 2, (int)G.cell_h - 2,
+                              (Color){52, 25, 25, 170});
+            }
 
             DrawRectangleLinesEx((Rectangle){x, y, G.cell_w, G.cell_h},
-                                 1,
-                                 (Color){120, 120, 120, 120});
+                                 1, (Color){120, 170, 220, 170});
         }
     }
 
@@ -97,11 +127,15 @@ static void draw_evidence_tiles(void) {
                            (int)G.cell_w - 12, (int)G.cell_h - 12,
                            e->major ? GOLD : RAYWHITE);
 
-        DrawText(e->major ? "!" : "?",
-                 (int)(x + G.cell_w * 0.5f - 6),
-                 (int)y + 13,
-                 28,
-                 e->major ? GOLD : RAYWHITE);
+        Rectangle clue_source = {0, 0, (float)clue_texture.width, (float)clue_texture.height};
+        Rectangle clue_dest = {
+            x + G.cell_w * 0.5f - 20.0f,
+            y + 8.0f,
+            40.0f,
+            40.0f
+        };
+        DrawTexturePro(clue_texture, clue_source, clue_dest,
+                       (Vector2){0, 0}, 0.0f, e->major ? GOLD : WHITE);
 
         DrawText(TextFormat("%d CR", e->cost),
                  (int)x + 19,
