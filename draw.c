@@ -1,310 +1,449 @@
-
-
 #include "draw.h"
+#include "utils.h"
 
-
-
-// GUARD — blue body, skin head, letter "G" on top 
-void draw_guard(float cx, float cy, float scale) {
-    int x = (int)cx, y = (int)cy, s = (int)scale;
-
-    // Body: a blue rectangle 
-    DrawRectangle(x - s, y - s, s * 2, s * 3, (Color){50, 80, 200, 255});
-
-    // Head: a skin-colored circle above the body 
-    DrawCircle(x, y - s * 2, s * 1.2f, (Color){220, 180, 140, 255});
-
-    // "G" label so the player knows this is a Guard 
-    DrawText("G", x - 5, y - s * 3 + 2, 14, WHITE);
+static void draw_unit_shape(Unit *u) {
+    if (u->type == UNIT_GUARD) {
+        DrawRectangle((int)u->x - 13, (int)u->y - 18, 26, 36, GOLD);
+        DrawCircle((int)u->x, (int)u->y - 22, 12, RAYWHITE);
+        DrawText("G", (int)u->x - 6, (int)u->y - 31, 18, BLACK);
+    } else {
+        DrawRectangle((int)u->x - 13, (int)u->y - 18, 26, 36, LIGHTGRAY);
+        DrawCircle((int)u->x, (int)u->y - 22, 12, RAYWHITE);
+        DrawText("C", (int)u->x - 6, (int)u->y - 31, 18, BLACK);
+    }
 }
 
-// COOK — white body (chef uniform), skin head, letter "C" 
-void draw_cook(float cx, float cy, float scale) {
-    int x = (int)cx, y = (int)cy, s = (int)scale;
+static void draw_enemy_shape(Enemy *e) {
+    Color body = (e->type == ENEMY_BRUTE) ? BROWN : MAROON;
+    int size = (e->type == ENEMY_BRUTE) ? 19 : 15;
 
-    // Body: white rectangle (chef whites) 
-    DrawRectangle(x - s, y - s, s * 2, s * 3, (Color){240, 240, 220, 255});
+    DrawRectangle((int)e->x - size,
+                  (int)e->y - size,
+                  size * 2,
+                  size * 2 + 8,
+                  body);
 
-    // Head: skin circle 
-    DrawCircle(x, y - s * 2, s * 1.2f, (Color){220, 180, 140, 255});
+    DrawCircle((int)e->x, (int)e->y - size - 7, size - 3, GRAY);
 
-    // "C" label 
-    DrawText("C", x - 5, y - s * 3 + 2, 14, (Color){40, 40, 40, 255});
+    float pct = e->hp / e->max_hp;
+    if (pct < 0.0f) pct = 0.0f;
+
+    DrawRectangle((int)e->x - 22, (int)e->y - 42, 44, 5, DARKGRAY);
+    DrawRectangle((int)e->x - 22, (int)e->y - 42, (int)(44 * pct), 5, LIME);
 }
 
-// SUSPECT enemy — dark body, reddish head, glowing red eyes 
-void draw_suspect(float cx, float cy, float scale, float bob) {
-    /* bob is a small up/down value that creates a walking animation */
-    int x = (int)cx, y = (int)(cy + bob), s = (int)scale;
-
-    // Body: dark brown rectangle (shadowy coat) 
-    DrawRectangle(x - s, y - s, s * 2, s * 3, (Color){60, 40, 30, 255});
-
-    // Head: reddish circle 
-    DrawCircle(x, y - s * 2, s * 1.2f, (Color){180, 80, 80, 255});
-
-    // Two small red circles = glowing eyes 
-    DrawCircle(x - s / 2, y - s * 2, s * 0.3f, RED);
-    DrawCircle(x + s / 2, y - s * 2, s * 0.3f, RED);
-}
-
-// BRUTE enemy — same idea but 40% bigger, darker, orange eyes 
-void draw_brute(float cx, float cy, float scale, float bob) {
-    // Scale multiplied by 1.4 makes brutes visibly bigger than suspects 
-    int x = (int)cx, y = (int)(cy + bob), s = (int)(scale * 1.4f);
-
-    /* Body: dark red rectangle */
-    DrawRectangle(x - s, y - s, s * 2, s * 3, (Color){80, 30, 20, 255});
-
-    /* Head: larger circle */
-    DrawCircle(x, y - s * 2, s * 1.3f, (Color){140, 60, 40, 255});
-
-    // Orange eyes — different from suspect so player can tell them apart 
-    DrawCircle(x - s / 2, y - s * 2, s * 0.35f, ORANGE);
-    DrawCircle(x + s / 2, y - s * 2, s * 0.35f, ORANGE);
-}
-
-
-  // GRID AND GAME ELEMENTS
-   
-
-void draw_grid(void) {
+static void draw_grid(void) {
     for (int row = 0; row < GRID_ROWS; row++) {
         for (int col = 0; col < GRID_COLS; col++) {
-            float cx = G.grid_ox + col * G.cell_w;
-            float cy = G.grid_oy + row * G.cell_h;
+            float x = G.grid_x + col * G.cell_w;
+            float y = G.grid_y + row * G.cell_h;
 
-            Color tile_color = (row % 2 == 0) ? (Color){34,20,12,255}
-                                              : (Color){28,16,9,255};
-            if (col == 0) tile_color = (Color){18,50,18,255};
+            Color fill = ((row + col) % 2 == 0)
+                         ? (Color){30, 31, 34, 255}
+                         : (Color){39, 40, 44, 255};
 
-            DrawRectangle((int)cx+1, (int)cy+1,
-                          (int)G.cell_w-2, (int)G.cell_h-2, tile_color);
-            DrawRectangleLinesEx((Rectangle){cx, cy, G.cell_w, G.cell_h},
-                                 1, (Color){55,40,28,180});
+            if (col == 0) fill = (Color){65, 55, 18, 255};
+            if (col == GRID_COLS - 1) fill = (Color){52, 25, 25, 255};
+
+            DrawRectangle((int)x + 1,
+                          (int)y + 1,
+                          (int)G.cell_w - 2,
+                          (int)G.cell_h - 2,
+                          fill);
+
+            DrawRectangleLinesEx((Rectangle){x, y, G.cell_w, G.cell_h},
+                                 1,
+                                 (Color){120, 120, 120, 120});
         }
     }
 
-    float sh = GRID_ROWS * G.cell_h;
-    DrawRectangleLinesEx((Rectangle){G.grid_ox, G.grid_oy, G.cell_w, sh},
-                         3, (Color){60,180,60,255});
-    DrawText("SAFE",
-             (int)(G.grid_ox + G.cell_w * 0.5f - 20),
-             (int)(G.grid_oy + sh * 0.5f - 8),
-             14, (Color){80,220,80,255});
+    DrawText("EVIDENCE", (int)G.grid_x + 6, (int)G.grid_y + 8, 14, GOLD);
+    DrawText("ARCHIVE", (int)G.grid_x + 10, (int)G.grid_y + 26, 14, GOLD);
+    DrawText("ENTRY", (int)(G.grid_x + (GRID_COLS - 1) * G.cell_w + 18),
+             (int)G.grid_y + 8, 14, RAYWHITE);
+}
 
-    for (int row = 0; row < GRID_ROWS; row++) {
-        float dy = G.grid_oy + row * G.cell_h;
-        float dx = G.grid_ox + (GRID_COLS - 1) * G.cell_w;
-        DrawRectangle((int)(dx + G.cell_w - 6), (int)dy,
-                      8, (int)G.cell_h, (Color){100,55,25,255});
+static void draw_evidence_tiles(void) {
+    for (int i = 0; i < TOTAL_EVIDENCE; i++) {
+        Evidence *e = &EVIDENCE[i];
+        float x = G.grid_x + e->col * G.cell_w;
+        float y = G.grid_y + e->row * G.cell_h;
+
+        if (e->collected) {
+            DrawRectangle((int)x + 6, (int)y + 6,
+                          (int)G.cell_w - 12, (int)G.cell_h - 12,
+                          (Color){35, 78, 45, 220});
+            DrawText("OK", (int)x + 28, (int)y + 25, 22, RAYWHITE);
+            continue;
+        }
+
+        if (!evidence_unlocked(i)) {
+            DrawRectangle((int)x + 6, (int)y + 6,
+                          (int)G.cell_w - 12, (int)G.cell_h - 12,
+                          (Color){48, 48, 48, 220});
+            DrawText("LOCK", (int)x + 16, (int)y + 24, 16, GRAY);
+            continue;
+        }
+
+        Color tile = e->major
+                     ? (Color){105, 74, 22, 240}
+                     : (Color){60, 62, 70, 240};
+
+        DrawRectangle((int)x + 6, (int)y + 6,
+                      (int)G.cell_w - 12, (int)G.cell_h - 12,
+                      tile);
+
+        DrawRectangleLines((int)x + 6, (int)y + 6,
+                           (int)G.cell_w - 12, (int)G.cell_h - 12,
+                           e->major ? GOLD : RAYWHITE);
+
+        DrawText(e->major ? "!" : "?",
+                 (int)(x + G.cell_w * 0.5f - 6),
+                 (int)y + 13,
+                 28,
+                 e->major ? GOLD : RAYWHITE);
+
+        DrawText(TextFormat("%d CR", e->cost),
+                 (int)x + 19,
+                 (int)y + 49,
+                 14,
+                 RAYWHITE);
     }
 }
 
-void draw_clue_tiles(void) {
-    float pulse = 0.5f + 0.5f * sinf(G.game_time * 3.f);
-
-    for (int i = 0; i < G.clue_tile_count; i++) {
-        float cx = G.grid_ox + G.clue_tiles[i].col * G.cell_w;
-        float cy = G.grid_oy + G.clue_tiles[i].row * G.cell_h;
-
-        DrawRectangle((int)cx+2, (int)cy+2,
-                      (int)G.cell_w-4, (int)G.cell_h-4,
-                      (Color){30, 30, 80, 160});
-        DrawText("?",
-                 (int)(cx + G.cell_w/2 - 7),
-                 (int)(cy + G.cell_h/2 - 10),
-                 22,
-                 (Color){100, 120, 255, (unsigned char)(160 + 95 * pulse)});
-    }
-}
-
-void draw_units_grid(void) {
-    float scale = fminf(G.cell_w, G.cell_h) * 0.17f;
-    if (scale < 4) scale = 4;
-
+static void draw_units(void) {
     for (int i = 0; i < G.unit_count; i++) {
-        if (!G.units[i].active) continue;
-        if (G.units[i].type == UNIT_GUARD)
-            draw_guard(G.units[i].x, G.units[i].y, scale);
-        else
-            draw_cook(G.units[i].x, G.units[i].y, scale);
+        if (G.units[i].active) draw_unit_shape(&G.units[i]);
     }
 }
 
-void draw_enemies_grid(void) {
-    float scale = fminf(G.cell_w, G.cell_h) * 0.15f;
-    if (scale < 4) scale = 4;
-
+static void draw_enemies(void) {
     for (int i = 0; i < MAX_ENEMIES; i++) {
-        Enemy *e = &G.enemies[i];
-        if (!e->active) continue;
-
-        float bob = sinf(e->anim_timer * 5.f) * 2.5f;
-
-        if (e->type == ENEMY_SUSPECT) draw_suspect(e->x, e->y, scale, bob);
-        else                          draw_brute  (e->x, e->y, scale, bob);
-
-        float pct  = e->hp / e->max_hp;
-        float barw = fminf(G.cell_w, G.cell_h) * 0.85f;
-        float bary = e->y - scale * 6.5f + bob;
-
-        DrawRectangle((int)(e->x - barw/2), (int)bary, (int)barw, 5,
-                      (Color){40,20,20,200});
-        DrawRectangle((int)(e->x - barw/2), (int)bary, (int)(barw * pct), 5,
-                      pct > 0.5f ? GREEN :
-                      pct > 0.25f ? (Color){255,200,0,255} : RED);
+        if (G.enemies[i].active) draw_enemy_shape(&G.enemies[i]);
     }
 }
 
-void draw_particles_all(void) {
-    for (int i = 0; i < MAX_PARTICLES; i++) {
-        Particle *p = &G.particles[i];
-        if (p->life <= 0.f) continue;
+static void draw_hud(void) {
+    DrawRectangle(0, 0, SCREEN_W, 92, (Color){15, 15, 17, 255});
 
-        float a = p->life / p->max_life;
-        Color c = p->color;
-        c.a = (unsigned char)(a * 255);
+    DrawText("NOIR", 20, 14, 28, GOLD);
 
-        DrawCircle((int)p->x, (int)p->y, p->size * a, c);
+    DrawText(TextFormat("Credits: %d", G.credits), 275, 18, 20, RAYWHITE);
+    DrawText(TextFormat("Kills: %d", G.kills), 415, 18, 20, RAYWHITE);
+    DrawText(TextFormat("Rumors: %d/%d", G.rumor_count, TOTAL_RUMORS),
+             525, 18, 20, RAYWHITE);
+    DrawText(TextFormat("Evidence: %d/%d", G.evidence_count, TOTAL_EVIDENCE),
+             680, 18, 20, GOLD);
+    DrawText(TextFormat("Threat: %s", threat_name()), 850, 18, 20, RAYWHITE);
+
+    DrawText("Archive:", 1020, 18, 20, RAYWHITE);
+    for (int i = 0; i < ARCHIVE_MAX_HP; i++) {
+        Color c = (i < G.archive_hp) ? GOLD : DARKGRAY;
+        DrawRectangle(1110 + i * 35, 15, 25, 23, c);
+    }
+
+    DrawText("Kill 3 enemies = Rumor | Click clue tiles to buy evidence | Right-click cancels placement",
+             20, 57, 16, LIGHTGRAY);
+
+    if (G.message_timer > 0.0f) {
+        int tw = MeasureText(G.message, 18);
+        DrawRectangle(SCREEN_W / 2 - tw / 2 - 12, 96, tw + 24, 30,
+                      (Color){0, 0, 0, 210});
+        DrawText(G.message, SCREEN_W / 2 - tw / 2, 102, 18, GOLD);
     }
 }
 
+static void draw_bottom_bar(void) {
+    DrawRectangle(0, SCREEN_H - 104, SCREEN_W, 104, (Color){15, 15, 17, 255});
+    DrawLine(0, SCREEN_H - 104, SCREEN_W, SCREEN_H - 104, GRAY);
 
-  // HUD AND UI
-   
+    Rectangle gr = guard_button_rect();
+    Rectangle cr = cook_button_rect();
+    Rectangle cf = case_button_rect();
+    Rectangle ar = accuse_button_rect();
 
-void draw_hud(void) {
-    DrawRectangle(0, 0, SCREEN_W, 50, (Color){14,10,8,245});
+    Color gfill = (G.placing_unit && G.selected_unit == UNIT_GUARD)
+                  ? GOLD : (Color){90, 78, 25, 255};
+    Color cfill = (G.placing_unit && G.selected_unit == UNIT_COOK)
+                  ? LIGHTGRAY : (Color){70, 70, 75, 255};
 
-    DrawText(TextFormat("NOIR  |  The Kitchen  |  Gold: %d  |  Wave: %d/%d",
-             G.gold, G.wave, WAVE_COUNT),
-             14, 14, 18, (Color){220,200,160,255});
+    DrawRectangleRec(gr, gfill);
+    DrawRectangleLinesEx(gr, 2, RAYWHITE);
+    DrawText("GUARD", (int)gr.x + 10, (int)gr.y + 8, 18, BLACK);
+    DrawText("3 CR | ranged", (int)gr.x + 10, (int)gr.y + 33, 15, BLACK);
 
-    DrawText("Safe:", SCREEN_W - 200, 14, 18, (Color){180,160,130,255});
-    for (int i = 0; i < 3; i++) {
-        Color hc = (i < G.safe_hp) ? RED : (Color){60,30,30,255};
-        DrawRectangle(SCREEN_W - 130 + i * 36, 14, 26, 22, hc);
-    }
+    DrawRectangleRec(cr, cfill);
+    DrawRectangleLinesEx(cr, 2, RAYWHITE);
+    DrawText("COOK", (int)cr.x + 10, (int)cr.y + 8, 18, BLACK);
+    DrawText("2 CR | close", (int)cr.x + 10, (int)cr.y + 33, 15, BLACK);
 
-    if (!G.wave_active && G.wave < WAVE_COUNT) {
-        DrawText(TextFormat("Next wave in: %.1f", G.wave_timer),
-                 SCREEN_W - 320, 58, 15, ORANGE);
-        DrawRectangle(SCREEN_W-320, 76, 280, 7, (Color){50,30,10,255});
-        DrawRectangle(SCREEN_W-320, 76,
-                      (int)(280 * (1.f - G.wave_timer / 5.f)), 7, ORANGE);
-    } else if (G.wave_active) {
-        DrawText(TextFormat("WAVE %d  -  ACTIVE", G.wave),
-                 SCREEN_W - 280, 58, 15, RED);
-    }
+    DrawText("Credits buy BOTH defense and evidence.", 360, SCREEN_H - 77, 18, RAYWHITE);
+    DrawText("That trade-off is the main strategy.", 360, SCREEN_H - 50, 16, LIGHTGRAY);
 
-    if (G.message_timer > 0.f) {
-        float alpha = fminf(1.f, G.message_timer);
-        int tw = MeasureText(G.message, 20);
-        DrawRectangle((SCREEN_W-tw)/2 - 12, 55, tw+24, 30,
-                      (Color){0,0,0,(unsigned char)(180*alpha)});
-        DrawText(G.message, (SCREEN_W-tw)/2, 60, 20,
-                 (Color){255,240,180,(unsigned char)(255*alpha)});
-    }
-}
+    bool case_hover = point_in_rect(GetMousePosition(), cf);
+    DrawRectangleRec(cf, case_hover ? (Color){85, 85, 90, 255} : (Color){60, 60, 65, 255});
+    DrawRectangleLinesEx(cf, 2, RAYWHITE);
+    DrawText("CASE FILE", (int)cf.x + 31, (int)cf.y + 19, 19, RAYWHITE);
 
-void draw_shop(void) {
-    float sy = SCREEN_H - 95.f;
+    bool unlocked = G.evidence_count >= ACCUSE_REQUIRED;
+    bool acc_hover = unlocked && point_in_rect(GetMousePosition(), ar);
+    Color afill = !unlocked
+                  ? (Color){45, 45, 45, 255}
+                  : acc_hover
+                    ? (Color){135, 45, 45, 255}
+                    : (Color){95, 35, 35, 255};
 
-    DrawRectangle(0, (int)sy - 5, SCREEN_W, 100, (Color){14,12,10,235});
-    DrawLine(0, (int)sy - 5, SCREEN_W, (int)sy - 5, (Color){70,55,35,200});
+    DrawRectangleRec(ar, afill);
+    DrawRectangleLinesEx(ar, 2, unlocked ? GOLD : GRAY);
 
-    Vector2 mp = GetMousePosition();
-    float scale = fminf(G.cell_w, G.cell_h) * 0.17f;
-    if (scale < 4) scale = 4;
-
-    bool hov = (mp.x>20 && mp.x<140 && mp.y>sy && mp.y<sy+75);
-    Color bc  = (G.selected==UNIT_GUARD && G.place_mode) ? (Color){80,110,200,255} :
-                hov ? (Color){55,70,130,255} : (Color){35,48,100,255};
-    DrawRectangle(20, (int)sy, 120, 75, bc);
-    DrawRectangleLinesEx((Rectangle){20,sy,120,75}, 2, (Color){100,140,255,255});
-    draw_guard(80, sy + 52, scale);
-    DrawText("GUARD", 28, (int)sy+6,  14, (Color){180,210,255,255});
-    DrawText(TextFormat("%dg", COST_GUARD), 28, (int)sy+57, 13, (Color){220,180,50,255});
-
-    hov = (mp.x>150 && mp.x<270 && mp.y>sy && mp.y<sy+75);
-    bc  = (G.selected==UNIT_COOK && G.place_mode) ? (Color){200,160,60,255} :
-          hov ? (Color){130,95,30,255} : (Color){90,65,20,255};
-    DrawRectangle(150, (int)sy, 120, 75, bc);
-    DrawRectangleLinesEx((Rectangle){150,sy,120,75}, 2, (Color){255,190,80,255});
-    draw_cook(210, sy + 52, scale);
-    DrawText("COOK", 158, (int)sy+6,  14, (Color){255,210,130,255});
-    DrawText(TextFormat("%dg", COST_COOK), 158, (int)sy+57, 13, (Color){220,180,50,255});
-
-    DrawText("Left-click grid to place   |   Right-click to cancel",
-             310, (int)sy+15, 14, (Color){140,130,110,255});
-    DrawText("Guard: hits same lane only     Cook: hits all nearby enemies",
-             310, (int)sy+36, 13, (Color){120,110,90,255});
-    DrawText("? = Clue tile   (Investigator coming next build!)",
-             310, (int)sy+58, 13, (Color){90,100,160,255});
-}
-
-
-  // SCREENS
-
-
-void draw_map(void) {
-    ClearBackground((Color){12,10,8,255});
-
-    DrawText("NOIR",
-             SCREEN_W/2 - MeasureText("NOIR",64)/2, 40, 64,
-             (Color){200,180,140,255});
-    DrawText("~ Investigation Board ~",
-             SCREEN_W/2 - MeasureText("~ Investigation Board ~",22)/2,
-             118, 22, (Color){140,120,100,255});
-    DrawText("Select a room to begin.",
-             SCREEN_W/2 - MeasureText("Select a room to begin.",16)/2,
-             155, 16, (Color){160,140,120,255});
-
-    Vector2 mp = GetMousePosition();
-    bool hov = (mp.x>440 && mp.x<840 && mp.y>260 && mp.y<370);
-    DrawRectangle(440, 260, 400, 110,
-                  hov ? (Color){80,50,30,255} : (Color){45,32,20,255});
-    DrawRectangleLinesEx((Rectangle){440,260,400,110}, 3, (Color){180,100,60,255});
-    DrawText("The Kitchen",              460, 278, 28, WHITE);
-    DrawText("Grid: 12 x 3  -  3 Waves",460, 318, 16, (Color){180,160,130,255});
-    if (hov) DrawText("Click to enter", 460, 346, 14, (Color){255,200,140,255});
-
-    const char *locked[] = {"The Ballroom","The Library","The Cellar","The Study"};
-    for (int i = 0; i < 4; i++) {
-        DrawRectangle(440, 390+i*68, 400, 54, (Color){22,18,14,255});
-        DrawRectangleLinesEx((Rectangle){440,390+i*68.f,400,54},
-                             2, (Color){40,34,26,255});
-        DrawText(locked[i], 460, 404+i*68, 20, (Color){65,55,45,255});
-        DrawText("LOCKED",  740, 408+i*68, 15, (Color){60,50,42,255});
+    if (unlocked) {
+        DrawText("ACCUSE", (int)ar.x + 65, (int)ar.y + 8, 20, GOLD);
+        DrawText("Unlocked", (int)ar.x + 67, (int)ar.y + 33, 14, RAYWHITE);
+    } else {
+        DrawText("ACCUSE", (int)ar.x + 65, (int)ar.y + 8, 20, GRAY);
+        DrawText(TextFormat("Need %d/%d evidence", ACCUSE_REQUIRED, TOTAL_EVIDENCE),
+                 (int)ar.x + 35, (int)ar.y + 33, 14, GRAY);
     }
 }
 
-void draw_gameover(void) {
-    ClearBackground((Color){15,5,5,255});
-    DrawText("THE SAFE WAS BREACHED",
-             SCREEN_W/2 - MeasureText("THE SAFE WAS BREACHED",44)/2,
-             220, 44, RED);
-    DrawText("Evidence destroyed. The killer walks free.",
-             SCREEN_W/2 - MeasureText("Evidence destroyed. The killer walks free.",22)/2,
-             300, 22, (Color){200,150,150,255});
-    DrawText("[R] to try again",
-             SCREEN_W/2 - MeasureText("[R] to try again",22)/2,
-             520, 22, (Color){200,160,160,255});
+static void draw_play(void) {
+    ClearBackground((Color){20, 20, 22, 255});
+    draw_hud();
+    draw_grid();
+    draw_evidence_tiles();
+    draw_units();
+    draw_enemies();
+    draw_bottom_bar();
+
+    if (G.placing_unit) {
+        DrawText("PLACEMENT MODE - click a free grid cell",
+                 20, SCREEN_H - 125, 16, GOLD);
+    }
 }
 
-void draw_win(void) {
-    ClearBackground((Color){5,15,5,255});
-    DrawText("KITCHEN DEFENDED!",
-             SCREEN_W/2 - MeasureText("KITCHEN DEFENDED!",52)/2,
-             220, 52, (Color){100,255,120,255});
-    DrawText("All waves repelled. Clues secured.",
-             SCREEN_W/2 - MeasureText("All waves repelled. Clues secured.",22)/2,
-             300, 22, (Color){160,220,160,255});
-    DrawText(TextFormat("Gold remaining: %d", G.gold),
-             SCREEN_W/2 - 80, 370, 22, (Color){220,180,50,255});
-    DrawText("[R] to play again",
-             SCREEN_W/2 - MeasureText("[R] to play again",22)/2,
-             520, 22, (Color){150,200,150,255});
+/* ------------------------------------------------------------
+   PANELS
+   ------------------------------------------------------------ */
+
+static void draw_panel_background(const char *title) {
+    DrawRectangle(0, 0, SCREEN_W, SCREEN_H, (Color){0, 0, 0, 175});
+
+    Rectangle box = {150, 95, 980, 610};
+    DrawRectangleRec(box, (Color){28, 28, 31, 255});
+    DrawRectangleLinesEx(box, 3, GOLD);
+
+    DrawText(title, 185, 125, 30, GOLD);
+    DrawText("Defense is paused while this screen is open.", 185, 168, 16, LIGHTGRAY);
 }
 
+static void draw_info_panel(void) {
+    draw_panel_background(G.popup_title ? G.popup_title : "INFORMATION");
+
+    draw_wrapped_text(G.popup_text ? G.popup_text : "",
+                      195, 235, 880, 24, 10, RAYWHITE);
+
+    Rectangle close = {470, 605, 340, 60};
+    if (button(close, "CONTINUE", true)) {
+        G.panel = PANEL_NONE;
+    }
+}
+
+static void draw_casefile_panel(void) {
+    draw_panel_background("CASE FILE");
+
+    DrawText(TextFormat("Evidence Collected: %d/%d", G.evidence_count, TOTAL_EVIDENCE),
+             185, 205, 22, GOLD);
+    DrawText(TextFormat("Rumors Collected: %d/%d", G.rumor_count, TOTAL_RUMORS),
+             485, 205, 22, RAYWHITE);
+
+    DrawText("SUSPECTS", 185, 252, 22, GOLD);
+
+    int sy = 285;
+    for (int i = 0; i < TOTAL_SUSPECTS; i++) {
+        DrawText(TextFormat("%d. %s - %s", i + 1, SUSPECTS[i].name, SUSPECTS[i].role),
+                 195, sy, 18, RAYWHITE);
+        draw_wrapped_text(SUSPECTS[i].note, 215, sy + 24, 400, 14, 4, LIGHTGRAY);
+        sy += 73;
+    }
+
+    DrawText("COLLECTED EVIDENCE", 650, 252, 22, GOLD);
+
+    int ey = 285;
+    bool any_evidence = false;
+    for (int i = 0; i < TOTAL_EVIDENCE; i++) {
+        if (!EVIDENCE[i].collected) continue;
+        any_evidence = true;
+
+        DrawText(TextFormat("%s%s", EVIDENCE[i].major ? "[MAJOR] " : "", EVIDENCE[i].title),
+                 660, ey, 16, EVIDENCE[i].major ? GOLD : RAYWHITE);
+        ey += 26;
+    }
+
+    if (!any_evidence) {
+        DrawText("No evidence collected yet.", 660, ey, 16, GRAY);
+    }
+
+    DrawText("RUMORS", 650, 480, 22, GOLD);
+    if (G.rumor_count == 0) {
+        DrawText("No rumors collected yet.", 660, 515, 16, GRAY);
+    } else {
+        int ry = 515;
+        for (int i = 0; i < G.rumor_count; i++) {
+            DrawText(TextFormat("Rumor %d", i + 1), 660, ry, 16, RAYWHITE);
+            ry += 24;
+        }
+    }
+
+    Rectangle close = {880, 620, 200, 52};
+    if (button(close, "CLOSE", true)) {
+        G.panel = PANEL_NONE;
+    }
+}
+
+static void draw_accuse_panel(void) {
+    draw_panel_background("FINAL ACCUSATION");
+
+    DrawText("Who killed Mr. Blackwood?", 185, 215, 26, RAYWHITE);
+    DrawText("Choose carefully. A wrong accusation ends the case.",
+             185, 255, 18, LIGHTGRAY);
+
+    for (int i = 0; i < TOTAL_SUSPECTS; i++) {
+        Rectangle r = {
+            260,
+            315 + i * 68,
+            760,
+            50
+        };
+
+        char label[128];
+        snprintf(label, sizeof(label), "%s - %s", SUSPECTS[i].name, SUSPECTS[i].role);
+
+        if (button(r, label, true)) {
+            if (i == 3) {
+                G.state = STATE_WIN;
+                G.panel = PANEL_NONE;
+            } else {
+                G.state = STATE_LOSE;
+                G.panel = PANEL_NONE;
+                G.wrong_accusation = true;
+            }
+        }
+    }
+
+    Rectangle cancel = {500, 610, 280, 50};
+    if (button(cancel, "BACK TO CASE", true)) {
+        G.panel = PANEL_NONE;
+    }
+}
+
+/* ------------------------------------------------------------
+   TITLE / END SCREENS
+   ------------------------------------------------------------ */
+
+static void draw_title(void) {
+    ClearBackground((Color){18, 18, 20, 255});
+
+    const char *title = "NOIR";
+    int tw = MeasureText(title, 54);
+    DrawText(title, SCREEN_W / 2 - tw / 2, 95, 54, GOLD);
+
+    const char *subtitle = "Tower Defense + Murder Investigation";
+    int sw = MeasureText(subtitle, 24);
+    DrawText(subtitle, SCREEN_W / 2 - sw / 2, 165, 24, RAYWHITE);
+
+    DrawRectangle(230, 235, 820, 330, (Color){32, 32, 35, 255});
+    DrawRectangleLines(230, 235, 820, 330, GRAY);
+
+    DrawText("THE IDEA", 265, 268, 25, GOLD);
+    DrawText("1. Defend the Evidence Archive from attackers.", 265, 315, 20, RAYWHITE);
+    DrawText("2. Every enemy kill gives +1 Credit.", 265, 350, 20, RAYWHITE);
+    DrawText("3. Every 3 kills reveals one Rumor.", 265, 385, 20, RAYWHITE);
+    DrawText("4. Spend Credits on defenders OR evidence tiles.", 265, 420, 20, RAYWHITE);
+    DrawText("5. At 4/7 Evidence, ACCUSE becomes available.", 265, 455, 20, RAYWHITE);
+    DrawText("6. Identify the murderer before the Archive is destroyed.", 265, 490, 20, RAYWHITE);
+
+    const char *start = "PRESS ENTER OR CLICK TO START";
+    int stw = MeasureText(start, 24);
+    DrawText(start, SCREEN_W / 2 - stw / 2, 630, 24, GOLD);
+
+    DrawText("No external art or assets required.", 20, SCREEN_H - 35, 16, GRAY);
+}
+
+static void draw_win(void) {
+    ClearBackground((Color){17, 31, 20, 255});
+
+    const char *title = "CASE SOLVED";
+    int tw = MeasureText(title, 56);
+    DrawText(title, SCREEN_W / 2 - tw / 2, 120, 56, GOLD);
+
+    DrawText("Victor Crowe killed Mr. Blackwood.", 380, 230, 28, RAYWHITE);
+
+    DrawRectangle(260, 295, 760, 230, (Color){28, 38, 30, 255});
+    DrawRectangleLines(260, 295, 760, 230, GOLD);
+
+    draw_wrapped_text(
+        "The victim discovered Victor was stealing from the manor accounts. "
+        "The torn letter arranged a 10 PM meeting. The broken watch and autopsy placed the death "
+        "around 10:15. Arthur's ticket cleared the butler. Finally, Victor's broken cufflink was "
+        "found beside fresh blood under the desk.",
+        300, 330, 680, 20, 8, RAYWHITE);
+
+    DrawText(TextFormat("Evidence collected: %d/%d | Kills: %d | Credits left: %d",
+                        G.evidence_count, TOTAL_EVIDENCE, G.kills, G.credits),
+             330, 560, 20, LIGHTGRAY);
+
+    DrawText("Press R to play again", 500, 650, 22, GOLD);
+}
+
+static void draw_lose(void) {
+    ClearBackground((Color){38, 18, 18, 255});
+
+    const char *title = G.wrong_accusation ? "WRONG ACCUSATION" : "ARCHIVE DESTROYED";
+    int tw = MeasureText(title, 50);
+    DrawText(title, SCREEN_W / 2 - tw / 2, 140, 50, GOLD);
+
+    if (G.wrong_accusation) {
+        DrawText("The real killer escaped because the case was closed on the wrong suspect.",
+                 260, 255, 22, RAYWHITE);
+    } else {
+        DrawText("The attackers destroyed the Evidence Archive before you solved the case.",
+                 280, 255, 22, RAYWHITE);
+    }
+
+    DrawText(TextFormat("Evidence: %d/%d | Kills: %d | Credits: %d",
+                        G.evidence_count, TOTAL_EVIDENCE, G.kills, G.credits),
+             420, 330, 22, LIGHTGRAY);
+
+    DrawText("Press R to try again", 505, 520, 22, GOLD);
+}
+
+/* ------------------------------------------------------------
+   DRAW DISPATCH
+   ------------------------------------------------------------ */
+
+void draw_game(void) {
+    if (G.state == STATE_TITLE) {
+        draw_title();
+        return;
+    }
+
+    if (G.state == STATE_WIN) {
+        draw_win();
+        return;
+    }
+
+    if (G.state == STATE_LOSE) {
+        draw_lose();
+        return;
+    }
+
+    draw_play();
+
+    if (G.panel == PANEL_INFO) draw_info_panel();
+    else if (G.panel == PANEL_CASEFILE) draw_casefile_panel();
+    else if (G.panel == PANEL_ACCUSE) draw_accuse_panel();
+}
+
+/* ------------------------------------------------------------
+   MAIN
+   ------------------------------------------------------------ */
