@@ -7,6 +7,8 @@ static Texture2D walker_texture;
 static Texture2D brute_texture;
 static Texture2D clue_texture;
 static Texture2D grid_texture;
+// new change
+static Texture2D bullet_texture;
 
 void load_draw_assets(void) {
     guard_texture = LoadTexture("assets/guard.png");
@@ -15,6 +17,8 @@ void load_draw_assets(void) {
     brute_texture = LoadTexture("assets/brute.png");
     clue_texture = LoadTexture("assets/clue.png");
     grid_texture = LoadTexture("assets/grid.png");
+    // new change
+    bullet_texture = LoadTexture("assets/bullet.png");
 }
 
 void unload_draw_assets(void) {
@@ -24,6 +28,8 @@ void unload_draw_assets(void) {
     UnloadTexture(brute_texture);
     UnloadTexture(clue_texture);
     UnloadTexture(grid_texture);
+    // new change
+    UnloadTexture(bullet_texture);
 }
 
 static void draw_unit_shape(Unit *u) {
@@ -151,6 +157,47 @@ static void draw_units(void) {
     }
 }
 
+// new change
+static void draw_bullets(void) {
+    for (int i = 0; i < G.unit_count; i++) {
+        Unit *u = &G.units[i];
+
+        if (!u->active) continue;
+        if (!u->shot_active) continue;
+
+        float bullet_x =
+            u->shot_start_x +
+            (u->shot_end_x - u->shot_start_x) * u->shot_progress;
+
+        float bullet_y =
+            u->shot_start_y +
+            (u->shot_end_y - u->shot_start_y) * u->shot_progress;
+
+        Rectangle source = {
+            0,
+            0,
+            (float)bullet_texture.width,
+            (float)bullet_texture.height
+        };
+
+        Rectangle dest = {
+            bullet_x - 21.0f,
+            bullet_y - 10.0f,
+            42.0f,
+            20.0f
+        };
+
+        DrawTexturePro(
+            bullet_texture,
+            source,
+            dest,
+            (Vector2){0, 0},
+            0.0f,
+            WHITE
+        );
+    }
+}
+
 static void draw_enemies(void) {
     for (int i = 0; i < MAX_ENEMIES; i++) {
         if (G.enemies[i].active) draw_enemy_shape(&G.enemies[i]);
@@ -246,6 +293,8 @@ static void draw_play(void) {
     draw_grid();
     draw_evidence_tiles();
     draw_units();
+    // new change
+    draw_bullets();
     draw_enemies();
     draw_bottom_bar();
 
@@ -370,9 +419,7 @@ static void draw_accuse_panel(void) {
     }
 }
 
-/* ------------------------------------------------------------
-   TITLE / END SCREENS
-   ------------------------------------------------------------ */
+
 
 static void draw_title(void) {
     ClearBackground((Color){18, 18, 20, 255});
@@ -451,9 +498,7 @@ static void draw_lose(void) {
     DrawText("Press R to try again", 505, 520, 22, GOLD);
 }
 
-/* ------------------------------------------------------------
-   DRAW DISPATCH
-   ------------------------------------------------------------ */
+
 
 void draw_game(void) {
     if (G.state == STATE_TITLE) {
@@ -478,6 +523,3 @@ void draw_game(void) {
     else if (G.panel == PANEL_ACCUSE) draw_accuse_panel();
 }
 
-/* ------------------------------------------------------------
-   MAIN
-   ------------------------------------------------------------ */

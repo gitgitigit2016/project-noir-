@@ -30,10 +30,24 @@ typedef struct {
     UnitType type;
     int col;
     int row;
+
     float x;
     float y;
+
     float attack_timer;
     bool active;
+
+    // Visual bullet effect
+    bool shot_active;
+
+    float shot_start_x;
+    float shot_start_y;
+
+    float shot_end_x;
+    float shot_end_y;
+
+    float shot_progress;
+    // for bullets 
 } Unit;
 
 typedef struct {
